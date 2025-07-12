@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = 3000;
-
+// * 
 app.use(cors());
 app.use(express.json());
 const MONGO_URI = process.env.MONGO_URI;
