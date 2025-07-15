@@ -84,10 +84,9 @@ function verifyToken(req, res, next) {
     });
 }
 
-
 // --- 6. ROTAS DA API ---
 
-// Rota de teste
+// Rota de teste da raiz da API
 app.get('/', (req, res) => {
     res.send('API do eConcursou no ar!');
 });
