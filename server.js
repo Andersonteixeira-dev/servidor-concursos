@@ -191,3 +191,4 @@ app.delete('/api/concursos/:id', verifyToken, async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor da API rodando na porta ${PORT}.`);
 });
+// Versão final para deploy - 15/07
