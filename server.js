@@ -12,11 +12,13 @@ const corsOptions = {
   origin: [
     'http://localhost:5173', 
     'http://localhost:5174', 
-    'https://www.econcursou.com.br', 
+    'https://www.econcursou.com.br',
+    'https://econcursou.com.br', 
     'https://melodic-hotteok-ce17e6.netlify.app'
   ],
   optionsSuccessStatus: 200
 };
+app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
 // Middleware para interpretar o corpo das requisições como JSON
