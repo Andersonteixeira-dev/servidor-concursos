@@ -18,7 +18,7 @@ const corsOptions = {
   ],
   optionsSuccessStatus: 200
 };
-app.options('*', cors(corsOptions));
+//app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
 // Middleware para interpretar o corpo das requisições como JSON
