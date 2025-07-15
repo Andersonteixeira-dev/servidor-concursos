@@ -29,7 +29,7 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(err => console.error('Erro ao conectar com o MongoDB:', err));
 
 
-// --- 4. DEFINIÇÃO DOS SCHEMAS E MODELS ----
+// --- 4. DEFINIÇÃO DOS SCHEMAS E MODELS ---
 
 // Schema para os links (subdocumento)
 const LinkSchema = new mongoose.Schema({
