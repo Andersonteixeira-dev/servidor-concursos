@@ -94,18 +94,25 @@ app.get('/api/concursos', async (req, res) => {
     try {
         const { search, estado } = req.query;
         const filtro = {};
-        if (search) {
-            filtro.instituicao = { $regex: search, $options: 'i' };
-        }
+      
         if (estado && estado !== 'todos') {
             filtro.ambito = { $ne: 'Nacional' };
             filtro.estado = estado;
-        }
+        }        
+        if (search) {
+            const regex = { $regex: search, $options: 'i' };             
+            filtro.$or = [
+                { instituicao: regex },
+                { cargos: regex },
+                { escolaridade: regex }
+            ];
+        }       
         const ordenacao = { instituicao: 1 };
         const concursos = await Concurso.find(filtro).sort(ordenacao);
+        
         res.json(concursos);
     } catch (error) {
-        res.status(500).json({ message: 'Erro ao buscar concursos', error });
+        res.status(500).json({ message: 'Erro ao buscar concursos', error: error.message });
     }
 });
 
