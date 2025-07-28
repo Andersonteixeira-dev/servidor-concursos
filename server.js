@@ -158,7 +158,7 @@ app.post('/api/login', async (req, res) => {
 
 app.post('/api/concursos', verifyToken, async (req, res) => {
     try {
-        console.log("PROVA #2 - BACK-END RECEBEU:", req.body);
+        
         const novoConcurso = new Concurso(req.body);
         await novoConcurso.save();
         res.status(201).json({ message: 'Concurso criado com sucesso!', data: novoConcurso });
