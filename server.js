@@ -4,7 +4,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
+const slugify = require('slugify');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -47,7 +47,15 @@ const concursoSchema = new mongoose.Schema({
         enum: ['Nacional', 'Estadual', 'Municipal'],
         required: true
     },
-    links: [LinkSchema]
+    links: [LinkSchema],
+    slug: { type: String, required: true, unique: true, index: true }
+});
+
+concursoSchema.pre('save', function(next) {    
+    if (this.isModified('instituicao')) {        
+        this.slug = slugify(this.instituicao, { lower: true, strict: true });
+    }
+    next(); 
 });
 
 const UserSchema = new mongoose.Schema({
@@ -75,6 +83,18 @@ function verifyToken(req, res, next) {
 
 app.get('/', (req, res) => {
     res.send('API do eConcursou no ar!');
+});
+
+app.get('/api/concursos/slug/:slug', async (req, res) => {
+    try {        
+        const concurso = await Concurso.findOne({ slug: req.params.slug });
+        if (!concurso) {
+            return res.status(404).json({ message: 'Concurso não encontrado.' });
+        }
+        res.json(concurso);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar concurso', error });
+    }
 });
 
 app.get('/api/concursos', async (req, res) => {
