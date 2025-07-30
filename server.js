@@ -51,23 +51,6 @@ const concursoSchema = new mongoose.Schema({
     slug: { type: String, required: true, unique: true, index: true }
 });
 
-concursoSchema.pre('save', async function(next) {    
-    if (this.isNew || this.isModified('instituicao')) {      
-        
-        const baseSlug = slugify(this.instituicao, { lower: true, strict: true });
-        let finalSlug = baseSlug;
-        let count = 1;
-        
-        while (await mongoose.models.Concurso.findOne({ slug: finalSlug })) {            
-            finalSlug = `${baseSlug}-${count}`;
-            count++;
-        }
-                
-        this.slug = finalSlug;
-    }
-    next(); 
-});
-
 const UserSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true }
@@ -187,9 +170,22 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.post('/api/concursos', verifyToken, async (req, res) => {
-    try {
+     try {
+        const dados = req.body;
+
+        // 1. Gera o slug a partir da instituição
+        let baseSlug = slugify(dados.instituicao, { lower: true, strict: true });
+        let finalSlug = baseSlug;
+        let count = 1;
         
-        const novoConcurso = new Concurso(req.body);
+        while (await Concurso.findOne({ slug: finalSlug })) {
+            finalSlug = `${baseSlug}-${count}`;
+            count++;
+        }
+        
+        const dadosComSlug = { ...dados, slug: finalSlug };
+
+        const novoConcurso = new Concurso(dadosComSlug);
         await novoConcurso.save();
         res.status(201).json({ message: 'Concurso criado com sucesso!', data: novoConcurso });
     } catch (error) {
@@ -198,8 +194,15 @@ app.post('/api/concursos', verifyToken, async (req, res) => {
 });
 
 app.put('/api/concursos/:id', verifyToken, async (req, res) => {
-    try {        
-        const concurso = await Concurso.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+     try {
+        const dadosAtualizados = req.body;
+        
+        if (dadosAtualizados.instituicao) {
+            let baseSlug = slugify(dadosAtualizados.instituicao, { lower: true, strict: true });           
+            dadosAtualizados.slug = baseSlug;
+        }
+
+        const concurso = await Concurso.findByIdAndUpdate(req.params.id, dadosAtualizados, { new: true, runValidators: true });
         if (!concurso) return res.status(404).json({ message: 'Concurso não encontrado' });
         res.json({ message: 'Concurso atualizado com sucesso!', data: concurso });
     } catch (error) {
