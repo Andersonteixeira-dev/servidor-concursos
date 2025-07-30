@@ -51,9 +51,19 @@ const concursoSchema = new mongoose.Schema({
     slug: { type: String, required: true, unique: true, index: true }
 });
 
-concursoSchema.pre('save', function(next) {    
-    if (this.isModified('instituicao')) {        
-        this.slug = slugify(this.instituicao, { lower: true, strict: true });
+concursoSchema.pre('save', async function(next) {    
+    if (this.isNew || this.isModified('instituicao')) {      
+        
+        const baseSlug = slugify(this.instituicao, { lower: true, strict: true });
+        let finalSlug = baseSlug;
+        let count = 1;
+        
+        while (await mongoose.models.Concurso.findOne({ slug: finalSlug })) {            
+            finalSlug = `${baseSlug}-${count}`;
+            count++;
+        }
+                
+        this.slug = finalSlug;
     }
     next(); 
 });
