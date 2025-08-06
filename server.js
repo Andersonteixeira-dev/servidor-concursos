@@ -56,8 +56,33 @@ const UserSchema = new mongoose.Schema({
     password: { type: String, required: true }
 });
 
+const postSchema = new mongoose.Schema({
+    titulo: { type: String, required: true },
+    resumo: { type: String, required: true },
+    conteudo: { type: String, required: true },
+    imagemCapa: { type: String }, // URL para a imagem de destaque
+    slug: { type: String, required: true, unique: true, index: true },
+    dataPublicacao: { type: Date, default: Date.now }
+});
+
+postSchema.pre('save', async function(next) {
+    if (this.isModified('titulo') || this.isNew) {
+        const baseSlug = slugify(this.titulo, { lower: true, strict: true });
+        let finalSlug = baseSlug;
+        let count = 1;
+        // Garante que o slug seja único
+        while (await mongoose.models.Post.findOne({ slug: finalSlug })) {
+            finalSlug = `${baseSlug}-${count}`;
+            count++;
+        }
+        this.slug = finalSlug;
+    }
+    next();
+});
+
 const Concurso = mongoose.model('Concurso', concursoSchema);
 const User = mongoose.model('User', UserSchema);
+const Post = mongoose.model('Post', postSchema);
 
 function verifyToken(req, res, next) {
     const bearerHeader = req.headers['authorization'];
@@ -139,6 +164,26 @@ app.get('/api/concursos/:id', async (req, res) => {
     }
 });
 
+// --- ROTAS PARA NOTÍCIAS ---
+app.get('/api/noticias', async (req, res) => {
+    try {
+        const posts = await Post.find().sort({ dataPublicacao: -1 });
+        res.json(posts);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar notícias', error });
+    }
+});
+
+app.get('/api/noticias/slug/:slug', async (req, res) => {
+    try {
+        const post = await Post.findOne({ slug: req.params.slug });
+        if (!post) return res.status(404).json({ message: 'Notícia não encontrada.' });
+        res.json(post);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar notícia', error });
+    }
+});
+
 app.post('/api/register', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -217,6 +262,36 @@ app.delete('/api/concursos/:id', verifyToken, async (req, res) => {
         res.json({ message: 'Concurso deletado com sucesso!' });
     } catch (error) {
         res.status(500).json({ message: 'Erro ao deletar concurso', error });
+    }
+});
+
+app.post('/api/noticias', verifyToken, async (req, res) => {
+    try {
+        const novoPost = new Post(req.body);
+        await novoPost.save();
+        res.status(201).json({ message: 'Notícia criada com sucesso!', data: novoPost });
+    } catch (error) {
+        res.status(400).json({ message: 'Erro ao criar notícia', error: error.message });
+    }
+});
+
+app.put('/api/noticias/:id', verifyToken, async (req, res) => {
+    try {
+        const post = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        if (!post) return res.status(404).json({ message: 'Notícia não encontrada' });
+        res.json({ message: 'Notícia atualizada com sucesso!', data: post });
+    } catch (error) {
+        res.status(400).json({ message: 'Erro ao atualizar notícia', error: error.message });
+    }
+});
+
+app.delete('/api/noticias/:id', verifyToken, async (req, res) => {
+    try {
+        const post = await Post.findByIdAndDelete(req.params.id);
+        if (!post) return res.status(404).json({ message: 'Notícia não encontrada' });
+        res.json({ message: 'Notícia deletada com sucesso!' });
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao deletar notícia', error });
     }
 });
 
