@@ -48,7 +48,7 @@ const concursoSchema = new mongoose.Schema({
         required: true
     },
     links: [LinkSchema],
-    slug: { type: String, required: true, unique: true, index: true }
+    slug: { type: String, unique: true, index: true }
 });
 
 const UserSchema = new mongoose.Schema({
@@ -267,7 +267,20 @@ app.delete('/api/concursos/:id', verifyToken, async (req, res) => {
 
 app.post('/api/noticias', verifyToken, async (req, res) => {
     try {
-        const novoPost = new Post(req.body);
+        const dados = req.body;
+        
+        if (dados.titulo) {
+            let baseSlug = slugify(dados.titulo, { lower: true, strict: true });
+            let finalSlug = baseSlug;
+            let count = 1;
+            while (await Post.findOne({ slug: finalSlug })) {
+                finalSlug = `${baseSlug}-${count}`;
+                count++;
+            }
+            dados.slug = finalSlug; 
+        }
+
+        const novoPost = new Post(dados);
         await novoPost.save();
         res.status(201).json({ message: 'Notícia criada com sucesso!', data: novoPost });
     } catch (error) {
