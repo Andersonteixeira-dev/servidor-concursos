@@ -277,6 +277,10 @@ app.post('/api/noticias', verifyToken, async (req, res) => {
 
 app.put('/api/noticias/:id', verifyToken, async (req, res) => {
     try {
+        if (req.body.titulo) {
+            req.body.slug = slugify(req.body.titulo, { lower: true, strict: true });
+           
+        }
         const post = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!post) return res.status(404).json({ message: 'Notícia não encontrada' });
         res.json({ message: 'Notícia atualizada com sucesso!', data: post });
