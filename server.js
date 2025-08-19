@@ -48,7 +48,8 @@ const concursoSchema = new mongoose.Schema({
         required: true
     },
     links: [LinkSchema],
-    slug: { type: String, unique: true, index: true }
+    slug: { type: String, unique: true, index: true },
+    statusManual: { type: String, default: '' }
 });
 
 const UserSchema = new mongoose.Schema({
@@ -70,7 +71,7 @@ postSchema.pre('save', async function(next) {
         const baseSlug = slugify(this.titulo, { lower: true, strict: true });
         let finalSlug = baseSlug;
         let count = 1;
-        // Garante que o slug seja único
+       
         while (await mongoose.models.Post.findOne({ slug: finalSlug })) {
             finalSlug = `${baseSlug}-${count}`;
             count++;
@@ -133,19 +134,6 @@ app.get('/api/concursos', async (req, res) => {
         }
 
         const concursos = await Concurso.find(filtro).sort({ instituicao: 1 });
-
-        const dataAtual = new Date();
-        concursos.forEach(concurso => {
-            const inicio = new Date(concurso.dataInicioInscricao);
-            if (dataAtual < inicio) {
-                concurso.statusInscricao = 'Previsto';
-            } else if (dataAtual > new Date(concurso.dataFimInscricao)) {
-                concurso.statusInscricao = 'Encerrado';
-            } else {
-                concurso.statusInscricao = 'Aberto';
-            }
-        });
-
         res.json(concursos);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar concursos', error: error.message });
@@ -239,18 +227,33 @@ app.post('/api/concursos', verifyToken, async (req, res) => {
 });
 
 app.put('/api/concursos/:id', verifyToken, async (req, res) => {
-     try {
-        const dadosAtualizados = req.body;
-        
-        if (dadosAtualizados.instituicao) {
-            let baseSlug = slugify(dadosAtualizados.instituicao, { lower: true, strict: true });           
-            dadosAtualizados.slug = baseSlug;
+    try {            
+        const concurso = await Concurso.findById(req.params.id);
+        if (!concurso) {
+            return res.status(404).json({ message: 'Concurso não encontrado' });
         }
 
-        const concurso = await Concurso.findByIdAndUpdate(req.params.id, dadosAtualizados, { new: true, runValidators: true });
-        if (!concurso) return res.status(404).json({ message: 'Concurso não encontrado' });
-        res.json({ message: 'Concurso atualizado com sucesso!', data: concurso });
+        const dadosAtualizados = req.body;
+        
+        if (dadosAtualizados.instituicao && dadosAtualizados.instituicao !== concurso.instituicao) {            
+            let baseSlug = slugify(dadosAtualizados.instituicao, { lower: true, strict: true });
+            let finalSlug = baseSlug;
+            let count = 1;            
+            while (await Concurso.findOne({ slug: finalSlug, _id: { $ne: concurso._id } })) {
+                finalSlug = `${baseSlug}-${count}`;
+                count++;
+            }
+            dadosAtualizados.slug = finalSlug;
+        }
+        
+        concurso.set(dadosAtualizados);
+        
+        const concursoAtualizado = await concurso.save();
+        
+        res.json({ message: 'Concurso atualizado com sucesso!', data: concursoAtualizado });
+
     } catch (error) {
+        console.error('ERRO NO SERVIDOR AO ATUALIZAR:', error);
         res.status(400).json({ message: 'Erro ao atualizar concurso', error: error.message });
     }
 });
